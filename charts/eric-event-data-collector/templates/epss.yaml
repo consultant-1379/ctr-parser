@@ -1,0 +1,204 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ template "eric-event-data-collector.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "eric-event-data-collector.name" . }}
+    app.kubernetes.io/version: {{ include "eric-event-data-collector.version" . }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name  | quote }}
+    chart:  {{ template "eric-event-data-collector.chart" . }}
+    app: {{ template "eric-event-data-collector.name" . }}
+    {{- include "eric-event-data-collector.user-labels" . | indent 4 }}
+  annotations:
+    helm.sh/created: "{{ now.Unix }}"
+    {{- include "eric-event-data-collector.product-info" . | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "eric-event-data-collector.name" . }}
+      release: {{ .Release.Name | quote }}
+  updateStrategy:
+    type: {{ .Values.updateStrategy.type | quote }}
+  podManagementPolicy: "Parallel"
+  serviceName: {{ template "eric-event-data-collector.name" . }}
+  replicas: {{ .Values.replicas }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "eric-event-data-collector.name" . }}
+        app.kubernetes.io/version: {{ include "eric-event-data-collector.version" . }}
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        heritage: {{ .Release.Service | quote }}
+        release: {{ .Release.Name  | quote }}
+        chart:  {{ template "eric-event-data-collector.chart" . }}
+        app: {{ template "eric-event-data-collector.name" . }}
+        {{- include "eric-event-data-collector.user-labels" . | indent 8 }}
+      annotations:
+        {{- if and (.Values.ctrParser.instrument.instrumentationMethod ) (eq .Values.ctrParser.instrument.instrumentationMethod  "JMX") }}
+        prometheus.io/scrape: "true"
+        {{- end }}
+        {{- include "eric-event-data-collector.product-info" . | indent 8 }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap-flow.yaml") . | sha256sum }}
+    spec:
+      {{- if .Values.affinity }}
+      affinity:
+{{ toYaml .Values.affinity | indent 8 }}
+      {{- end }}
+      {{- if  .Values.imageCredentials.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.imageCredentials.pullSecret | quote }}
+      {{- else if .Values.global.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.global.pullSecret  | quote }}
+      {{- end }}
+      terminationGracePeriodSeconds: 10
+      initContainers:
+      - name: {{ .Chart.Name }}-init
+        {{- if .Values.imageCredentials.registry.url }}
+        image: "{{ .Values.imageCredentials.registry.url }}/{{ .Values.imageCredentials.repoPath }}/{{ .Values.images.collector.name }}:{{ .Values.images.collector.tag }}"
+        {{- else }}
+        image: "{{ .Values.global.registry.url }}/{{ .Values.imageCredentials.repoPath }}/{{ .Values.images.collector.name }}:{{ .Values.images.collector.tag }}"
+        {{- end }}
+        env:
+        - name: SCHEMA_IMPORTER_SCHEMA_REGISTRY_CONNECTION_URL
+          value: "{{ template "eric-event-data-collector.schema-registry.url" . }}"
+        command: ['curl', '-X', 'GET', 'http://$(SCHEMA_IMPORTER_SCHEMA_REGISTRY_CONNECTION_URL)']
+      containers:
+      - name: {{ template "eric-event-data-collector.name" . }}
+        {{- if .Values.imageCredentials.registry.url }}
+        image: "{{ .Values.imageCredentials.registry.url }}/{{ .Values.imageCredentials.repoPath }}/{{ .Values.images.collector.name }}:{{ .Values.images.collector.tag }}"
+        {{- else }}
+        image: "{{ .Values.global.registry.url }}/{{ .Values.imageCredentials.repoPath }}/{{ .Values.images.collector.name }}:{{ .Values.images.collector.tag }}"
+        {{- end }}
+        imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          privileged: false
+          runAsNonRoot: true
+          capabilities:
+            drop:
+              - all
+        env:
+        - name: JMX_PORT
+          value: {{ .Values.ctrParser.instrument.jmx.destPort | quote }}
+        - name: APPLICATION_ID
+          value: {{ .Values.ctrParser.applicationId | quote }}
+        - name: APPLICATION_HOME
+          value: {{ .Values.ctrParser.applicationHome | quote }}
+        - name: FLOW_DIRECTORY
+          value: {{.Values.ctrParser.flowDirectory | quote }}
+        - name: INSTRUMENTATION_ON
+          value: {{ .Values.ctrParser.instrument.instrumentationOn | quote }}
+        - name: INSTRUMENTATION_METHOD
+          value: {{ .Values.ctrParser.instrument.instrumentationMethod | quote }}
+        - name: INSTRUMENTATION_FILE_LOCATION
+          value: {{ .Values.ctrParser.instrument.instrumentationFileLocation | quote }}
+        - name: LOGBACK_FILE
+          value: {{ printf "%s/%s" .Values.ctrParser.logging.logDirectory .Values.ctrParser.logging.logbackFile | quote }}
+        - name: ROOT_LOGGER_LEVEL
+          value: {{ .Values.ctrParser.logging.rootLoggerLevel | quote }}
+        - name: LOG_DIR
+          value: {{ .Values.ctrParser.logging.logDirectory | quote }}
+        - name: MAX_HEAP_SIZE_GB
+          value: {{ .Values.ctrParser.maxHeap | quote }}
+        - name: INITIAL_HEAP_SIZE_GB
+          value: {{ .Values.ctrParser.heap | quote}}
+        - name: EVENT_PARSER_HOST_NAME
+          value: {{ template "eric-event-data-collector.host" .  }}
+        - name: SCHEMA_REGISTRY
+          value: {{ template "eric-event-data-collector.schemaRegistry.host" .  }}
+        - name: IPL_DIRECTORY
+          value: {{ .Values.ctrParser.ipl.iplPath | quote }}
+        - name: CMMEDIATOR_SUBSCRIBER_FILE
+          value: {{ .Values.ctrParser.ipl.subscriber.cmMediator_SubscriberFile | quote }}
+        - name: STAGING_MOUNT_PATH
+          value: {{ .Values.ctrParser.staging | quote }}
+        livenessProbe:
+          exec:
+            command:
+            - "pgrep"
+            - "-fl"
+            - "java"
+          initialDelaySeconds: {{.Values.ctrParser.livenessProbeInitialDelaySeconds}}
+          periodSeconds: {{.Values.ctrParser.livenessProbePeriodSeconds}}
+        readinessProbe:
+          exec:
+            command:
+            - "pgrep"
+            - "-fl"
+            - "java"
+          initialDelaySeconds: {{.Values.ctrParser.readinessProbeInitialDelaySeconds }}
+          periodSeconds: {{.Values.ctrParser.readinessProbePeriodSeconds}}
+        ports:
+        - containerPort: {{ .Values.ctrParser.instrument.jmx.destPort }}
+          name: jmx-port
+        resources:
+          limits:
+            cpu: {{ .Values.ctrParser.maxCpu | quote }}
+            memory: {{ .Values.ctrParser.maxMemory | quote }}
+          requests:
+            cpu: {{ .Values.ctrParser.cpu | quote }}
+            memory: {{ .Values.ctrParser.memory | quote }}
+        volumeMounts:
+{{ include "eric-event-data-collector.volumeMounts" . | indent 8 -}}
+        - name: {{ template "eric-event-data-collector.name" . }}-flow-config
+          mountPath: "{{ .Values.ctrParser.staging }}/{{ .Values.ctrParser.flow.flowFile }}"
+          subPath: "{{ .Values.ctrParser.flow.flowFile }}"
+        - name: {{ template "eric-event-data-collector.name" . }}-flow-config
+          mountPath: "{{ .Values.ctrParser.staging }}/{{ .Values.ctrParser.ipl.subscriber.subscriberFile }}"
+          subPath: "{{ .Values.ctrParser.ipl.subscriber.subscriberFile }}"
+        - name: {{ template "eric-event-data-collector.name" . }}-flow-config
+          mountPath: "{{ .Values.ctrParser.staging }}/{{ .Values.ctrParser.ipl.subscriber.cmMediator_SubscriberFile }}"
+          subPath: "{{ .Values.ctrParser.ipl.subscriber.cmMediator_SubscriberFile }}"
+        - name: {{ template "eric-event-data-collector.name" . }}-flow-config
+          mountPath: "{{ .Values.ctrParser.staging }}/{{ .Values.ctrParser.ipl.publisher.publisherFile }}"
+          subPath: "{{ .Values.ctrParser.ipl.publisher.publisherFile }}"
+        - name: {{ template "eric-event-data-collector.name" .  }}-flow-config
+          mountPath: "{{ .Values.ctrParser.staging }}/{{ .Values.ctrParser.ipl.eventFilterFile }}"
+          subPath: "{{ .Values.ctrParser.ipl.eventFilterFile }}"
+        - name: {{ template "eric-event-data-collector.name" . }}-flow-config
+          mountPath: "{{ .Values.ctrParser.logging.logDirectory }}/{{ .Values.ctrParser.logging.logbackFile }}"
+          subPath: "{{ .Values.ctrParser.logging.logbackFile }}"
+      {{- if and (.Values.ctrParser.instrument.instrumentationMethod ) (eq .Values.ctrParser.instrument.instrumentationMethod  "JMX") }}
+      - name: {{ template "eric-event-data-collector.name" . }}-jmx
+      {{- if .Values.imageCredentials.registry.url }}
+        image: "{{ .Values.imageCredentials.registry.url }}/{{ .Values.imageCredentials.jmxPath }}/{{ .Values.images.jmx.name }}:{{ .Values.images.jmx.tag }}"
+        {{- else }}
+        image: "{{ .Values.global.registry.url }}/{{ .Values.imageCredentials.jmxPath }}/{{ .Values.images.jmx.name }}:{{ .Values.images.jmx.tag }}"
+        {{- end }}
+        imagePullPolicy: {{ .Values.imagePullPolicy | quote }}
+        env:
+        - name: SERVICE_PORT
+          value: {{ .Values.ctrParser.instrument.jmx.servicePort | quote }}
+        - name: DEST_PORT
+          value: {{ .Values.ctrParser.instrument.jmx.destPort | quote }}
+        - name: RULES_MODULE
+          value: {{ .Values.ctrParser.instrument.jmx.rules | quote }}
+        ports:
+        - containerPort: {{ .Values.ctrParser.instrument.jmx.servicePort }}
+          name: jmx-srv-port
+        livenessProbe:
+          tcpSocket:
+            port: {{ .Values.ctrParser.instrument.jmx.servicePort }}
+          initialDelaySeconds: {{ .Values.ctrParser.instrument.jmx.livenessProbeInitialDelaySeconds }}
+          timeoutSeconds: {{ .Values.ctrParser.instrument.jmx.livenessProbeTimeoutSeconds }}
+        readinessProbe:
+          tcpSocket:
+            port: {{ .Values.ctrParser.instrument.jmx.servicePort }}
+          initialDelaySeconds: {{ .Values.ctrParser.instrument.jmx.readinessProbeInitialDelaySeconds }}
+          timeoutSeconds: {{ .Values.ctrParser.instrument.jmx.readinessProbeTimeoutSeconds }}
+        resources:
+          limits:
+            cpu: {{ .Values.ctrParser.instrument.jmx.maxCpu | quote }}
+            memory: {{ .Values.ctrParser.instrument.jmx.maxMemory | quote }}
+          requests:
+            cpu: {{ .Values.ctrParser.instrument.jmx.cpu | quote }}
+            memory: {{ .Values.ctrParser.instrument.jmx.memory | quote }}
+      {{- end }}
+      volumes:
+      - name: {{  template "eric-event-data-collector.name" .  }}-flow-config
+        configMap:
+          name: {{ template "eric-event-data-collector.name" .  }}-flow-config
+{{ include "eric-event-data-collector.volumes" . | indent 6 -}}

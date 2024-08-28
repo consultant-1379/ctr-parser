@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configEntity xmlns="http://www.ericsson.com/oss/itpf/deployment/dst/descriptor">
+    <description>event-data-collector</description>
+    <singleton>true</singleton>
+    <scaleUnit>
+    <loadDrivers>
+           <loadDriver name="numberOfCells" description="Event Data Collector supported cells" />
+           <loadDriver name="eventRatePerCell" description="Event Data Collector supports a Busy Hour input Cell Trace event rate per Cell per second" />
+    </loadDrivers>
+    <minimumUnit>
+        <!--zero numeric fields or blank calculations if you dont have CPU figures for approval-->
+        <profile>
+            <cpuCores>1.25</cpuCores>
+            <cpuMinutes>0.5</cpuMinutes>
+            <peakCpuMinutes>1</peakCpuMinutes>
+            <memory>1024</memory>
+        </profile>
+        <profileConversionFormulae>
+			 <!--If consumer does not support Math.min(), Math.min function must be replaced-->
+             <cpuMinutes>(Math.min(eventRatePerCell * (ropDuration / processingTimeInMinutes) * numberOfCells, eventsProcessingCapacity) * cpuMultiplierFactor + minimumCpuCorrection) / 60</cpuMinutes>
+            <memory>(kafkaInputBatchSize*numberOfPartitions + kafkaOutputBatchSize + averageSchemaSize*numSupportedEvents + osCache + averageInputEventFileSize) * 1.1</memory>
+        </profileConversionFormulae>
+    </minimumUnit>
+    <optimalUnit>
+        <!--zero numeric fields or blank calculations if you dont have CPU figures for approval-->
+        <profile>
+            <cpuCores>1.5</cpuCores>
+            <cpuMinutes>0.5</cpuMinutes>
+            <peakCpuMinutes>1</peakCpuMinutes>
+            <memory>1280</memory>
+        </profile>
+        <profileConversionFormulae>
+			<!--If consumer does not support Math.min(), Math.min function must be replaced-->
+            <cpuMinutes>(Math.min(eventRatePerCell * (ropDuration / processingTimeInMinutes) * numberOfCells, eventsProcessingCapacity) * cpuMultiplierFactor + minimumCpuCorrection) / 60</cpuMinutes>
+            <peakCpuMinutes>0</peakCpuMinutes>
+            <memory>(kafkaInputBatchSize*numberOfPartitions + kafkaOutputBatchSize + averageSchemaSize*numSupportedEvents + osCache + averageInputEventFileSize) * 1.2</memory>
+        </profileConversionFormulae>
+    </optimalUnit>
+    </scaleUnit>
+    <parameters>
+		<property name="averageInputEventFileSize" defaultValue="200000" description="Average input event file size in KB" usage="OPTIONAL" />
+		<property name="kafkaInputBatchSize" defaultValue="400" description="Kafka Consumer fetch size in KB" usage="OPTIONAL" />
+		<property name="kafkaOutputBatchSize" defaultValue="50500" description="Kafka Producer batch Size in KB" usage="OPTIONAL" />
+		<property name="averageSchemaSize" defaultValue="28" description="Average size in KB of Avro schema on Heap" usage="OPTIONAL" />
+		<property name="numSupportedEvents" defaultValue="2" description="Number of concurrent event types supported" usage="OPTIONAL" />
+		<property name="osCache" defaultValue="565000" description="Size in KB of OS cache used within container" usage="OPTIONAL" />
+		<property name="numberOfPartitions" defaultValue="10" description="Number of Kafka topic partitions" usage="OPTIONAL" />
+		<property name="minimumCpuCorrection" defaultValue="20" description="Minimum CPU usage correction in seconds" usage="OPTIONAL" />
+		<property name="cpuMultiplierFactor" defaultValue="0.00009" description="CPU multiplier factor" usage="OPTIONAL" />
+		<property name="processingTimeInMinutes" defaultValue="3" description="Processing time in minutes" usage="OPTIONAL" />
+		<property name="ropDuration" defaultValue="15" description="Duration of a ROP in minutes" usage="OPTIONAL" />
+		<property name="eventsProcessingCapacity" defaultValue="435185" description="Processing events capacity per instance per second" usage="OPTIONAL" />
+	</parameters>
+</configEntity>

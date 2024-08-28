@@ -1,0 +1,33 @@
+dependencies:
+  - name: eric-data-coordinator-zk
+    repository: https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-adp-gs-all-helm/
+    version: 1.44.0+17
+    condition: eric-data-coordinator-zk.enabled
+  - name: eric-data-message-bus-kf
+    repository: https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-adp-gs-all-helm/
+    version: 1.27.0+21
+    condition: eric-data-message-bus-kf.enabled
+  - name: eric-data-document-database-pg
+    version: 8.11.0+76
+    repository: "https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-adp-gs-released-helm"
+    condition: eric-data-document-database-pg.enabled
+  - name: eric-oss-schema-registry-sr
+    repository: https://arm.epk.ericsson.se/artifactory/proj-ec-son-drop-helm/
+    version: 1.1.18-4
+    condition: eric-oss-schema-registry-sr.enabled
+  - name: eric-data-engine-sk
+    repository: https://arm.epk.ericsson.se/artifactory/proj-ec-son-drop-helm
+    version: 1.1.0-150
+    condition: eric-data-engine-sk.enabled
+  - name: eric-event-data-collector
+    repository: https://armdocker.rnd.ericsson.se/artifactory/proj-helm_aia-generic-local/releases/eric-event-data-collector
+    version: 1.0.0-31
+    condition: eric-event-data-collector.enabled
+  - name: eric-pm-server
+    repository: "https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-adp-pm-server-helm"
+    version: 10.18.0-47
+    condition: eric-pm-server.enabled
+  - name: eric-cm-mediator
+    repository: "https://arm.rnd.ki.sw.ericsson.se/artifactory/proj-adp-cm-mediator-helm"
+    version: 8.8.0-18
+    condition: eric-cm-mediator.enabled

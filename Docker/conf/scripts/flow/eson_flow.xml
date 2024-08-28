@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlowDefinition xmlns:oc="urn:com:ericsson:schema:xml:oss:oss_common" xmlns="urn:com:ericsson:schema:xml:oss:fbp_flow"
+        oc:ns="com.ericsson.oss.services" oc:name="EsnSolutionSet" oc:version="1.0.0">
+ 
+<oc:modelCreationInfo author="easchud" creationDate="10/07/2018">
+  <oc:designedModel componentId="avroParserEps"/>
+</oc:modelCreationInfo>
+<oc:desc>Parse input CTR files and filter out the desired decode events to kafka output topic.</oc:desc>
+ 
+  <input name="kafkaInputAdaptor">
+    <attribute name="uri" value="generic:/" />
+    <attribute name="integration.point.uri" value="local:///ericsson/apeps/ipl" />
+    <attribute name="integration.point.name" value="SUBSCRIBER_INTEGRATION_POINT" />
+  </input>
+
+  <input name="cmMediatorKafkaInputAdaptor">
+    <attribute name="uri" value="generic:/" />
+    <attribute name="integration.point.uri" value="local:///ericsson/apeps/ipl" />
+    <attribute name="integration.point.name" value="CMMEDIATOR_SUBSCRIBER_INTEGRATION_POINT" />
+  </input>
+
+  <output name="kafkaOutputAdapter">
+    <attribute name="uri" value="avro:/"/>
+    <attribute name="integration.point.uri" value="local:///ericsson/apeps/ipl" />
+    <attribute name="integration.point.name" value="PUBLISHER_INTEGRATION_POINT" />
+  </output>
+
+  <step name="pmFileParser">
+    <handler>
+      <className>com.ericsson.component.aia.services.exteps.eh.parser.PMFileParser</className>
+    </handler>
+    <attribute name="schematype" value="celltrace"/>
+    <attribute name="decodedEventType" value="generic_record"/>  
+    <attribute name="eventFilterPath" value="local://ericsson/apeps/ipl/eventListFilter.json"/> 
+  </step>
+
+
+  <path>
+    <from uri="kafkaInputAdaptor"/>
+    <to uri="pmFileParser" />
+    <to uri="kafkaOutputAdapter" />
+  </path>
+
+   <path>
+     <from uri="cmMediatorKafkaInputAdaptor"/>
+     <to uri="pmFileParser" />
+   </path>
+
+</FlowDefinition>

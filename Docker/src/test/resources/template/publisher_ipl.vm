@@ -1,0 +1,44 @@
+{
+"type": "PUBLISHER",
+"properties": [{
+		"name": "request.timeout.ms",
+		"value": "1000"
+	}, {
+		"name": "bootstrap.servers",
+		"value": "$bootstrapServers"
+	}, {
+		"name": "acks",
+		"value": "all"
+	}, {
+		"name": "retries",
+		"value": "0"
+	}, {
+		"name": "batch.size",
+		"value": "1"
+	}, {
+		"name": "linger.ms",
+		"value": "1"
+	}, {
+		"name": "buffer.memory",
+		"value": "2488"
+	}, {
+		"name": "partition_count",
+		"value": "1"
+	}, {
+		"name": "auto.create.topics.enable",
+		"value": "true"
+	}
+],
+"destinations": [{
+		"name": "$topicName",
+		"properties": [{
+				"name": "key.serializer",
+				"value": "org.apache.kafka.common.serialization.StringSerializer"
+			}, {
+				"name": "value.serializer",
+				"value": "com.ericsson.component.aia.common.avro.kafka.encoder.KafkaGenericRecordEncoder"
+			}
+		]  
+	}
+]
+}

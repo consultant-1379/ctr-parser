@@ -1,0 +1,9 @@
+schemaVersion: "2.0.0"
+
+# Verifies that the files required to run the container are present and executable
+
+fileExistenceTests:
+  - name: 'cmd'
+    path: '/usr/sbin/docker-entrypoint.sh'
+    shouldExist: true
+    permissions: '-rwxrwxrwx'

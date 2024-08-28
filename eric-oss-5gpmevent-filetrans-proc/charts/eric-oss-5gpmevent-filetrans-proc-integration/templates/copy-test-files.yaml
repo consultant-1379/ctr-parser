@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "eric-oss-5gpmevent-filetrans-proc-integration.name" . }}-copy-files
+  labels:
+    app: {{ template "eric-oss-5gpmevent-filetrans-proc-integration.name" . }}
+    chart: {{ template "eric-oss-5gpmevent-filetrans-proc-integration.chart" . }}
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "2"
+spec:
+  ttlSecondsAfterFinished: 30
+  template:
+    spec:
+      containers:
+        - name: {{ template "eric-oss-5gpmevent-filetrans-proc-integration.name" . }}-copy-files
+          image: {{ .Values.testsuite.image.repository }}/{{ .Values.testsuite.image.name }}:{{ .Values.testsuite.image.tag }}
+          imagePullPolicy: {{ .Values.imageCredentials.pullPolicy }}
+          command: ["/bin/sh"]
+          args: ["-c", 'echo $(ls /opt/event-data-collector-testsuite/ctrfiles/) && cp -R /opt/event-data-collector-testsuite/ctrfiles/* /stubbed-enm/fls/files/ && echo $(ls /stubbed-enm/fls/files/)']
+          volumeMounts:
+          - name: task-pv-storage
+            mountPath: /stubbed-enm/fls/files/
+      restartPolicy: Never
+      volumes:
+        - name: task-pv-storage
+          persistentVolumeClaim:
+            claimName: eric-oss-5gpmevent-filetrans-proc-pvc

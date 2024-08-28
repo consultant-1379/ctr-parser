@@ -1,0 +1,21 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ include "eric-oss-5gpmevent-filetrans-proc.fullname" . }}-pvc
+  labels:
+    app: {{ template "eric-oss-5gpmevent-filetrans-proc.name" . }}
+    chart: {{ template "eric-oss-5gpmevent-filetrans-proc.chart" . }}
+    app.kubernetes.io/name: {{ .Chart.Name | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    "helm.sh/hook": pre-install,post-delete
+    "helm.sh/hook-weight": "1"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  storageClassName: eric-nfs
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: "1G"

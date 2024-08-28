@@ -1,0 +1,48 @@
+# Compiled source #
+*.class
+*/bin/*
+*bin/*
+bin
+build
+*.log
+
+
+# Eclipse files
+.project
+.classpath
+.settings
+
+#Intellij Files
+*.iml
+.idea
+
+# Packages
+*.jar
+*.gz
+*.zip
+
+# Maven build files
+*staging/*
+target
+reports
+# ARQ tests
+arq-perf
+
+# PMD
+*.pmd
+*.pmdruleset.xml
+*.checkstyle
+
+# Merge files
+*.orig
+*.versionsBackup
+
+# jboss files
+transaction.log
+
+# python
+.pydevproject
+
+*.*~
+.gitignore (END)
+

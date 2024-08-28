@@ -1,0 +1,6 @@
+dependencies:
+  - alias: stubbed-enm
+    name: stubbed-enm
+    repository: https://arm.epk.ericsson.se/artifactory/proj-eson-temp-helm/
+    version: 0.1.0
+    condition: stubbed-enm.enabled

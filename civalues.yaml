@@ -1,0 +1,145 @@
+global:
+  pullSecret: testdeploy-secret
+  security:
+    tls:
+      enabled: false
+eric-event-data-collector:
+  replicas: 1
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+eric-data-message-bus-kf:
+  configurationOverrides:
+    "default.replication.factor": 3
+    "offsets.topic.replication.factor": 3
+    "log.retention.hours": 168
+    "log.cleanup.policy": "delete"
+    "log.cleaner.enable": "true"
+    "log.cleaner.min.compaction.lag.ms": 0
+    "auto.create.topics.enable": "false"
+    "message.max.bytes": "1200000"
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+eric-data-coordinator-zk:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+  replicas: 1
+schemaregistry:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+eric-data-document-database-pg:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+  credentials:
+    kubernetesSecretName: cm-mediator-db-secret
+    keyForUserId: username
+    keyForUserPw: password
+  replicas: 1
+eric-data-processor-s:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+schema-importer:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+eric-pm-server:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+eric-cm-mediator:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+  credentials:
+    kubernetesSecretName: cm-mediator-db-secret
+    keyForUserId: username
+    keyForUserPw: password
+  replicaCount: 1
+eric-log-shipper:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+eric-data-visualizer-kb:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+eric-data-search-engine:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+eric-log-transformer:
+  global:
+    security:
+      tls:
+        enabled: false
+  security:
+    tls:
+      brAgent:
+        enabled: false
+imageCredentials:
+  pullSecret: testdeploy-secret

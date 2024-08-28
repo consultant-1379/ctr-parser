@@ -1,0 +1,8 @@
+apiVersion: v1
+description: A Helm chart for Event Data Collector
+name: eric-event-data-collector
+icon: https://www.ericsson.com/EricssonLogo/eric_logo.jpg
+version: 1.0.0-0 # Bob will populate the tag when packaging the chart
+maintainers:
+  - name: AIA
+    email: PDLCOREAIA@pdl.internal.ericsson.com

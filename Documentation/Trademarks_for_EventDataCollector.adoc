@@ -1,0 +1,25 @@
+:author: Michael Lawless
+:doc-name: Trademark Information
+:doc-no: 1/006 51-CAV 101 049/1
+:revnumber: PA1
+:revdate: {sys: date +%Y-%m-%d}
+:approved-by-name: Mohamed Ibrahim C
+:approved-by-department: BDGSBECA
+
+= Trademarks Information
+
+**Services**
+
+- Event Data Collector
+
+== Trademarks Used in Services
+For the documents about **Event Data Collector**, the trademarks used and their respective owners, are as follows:
+
+- **Apache Kafka** and **Kafka** are trademarks of the Apache Software Foundation.
+- **Apache ZooKeeper** and **ZooKeeper** are trademarks of the Apache Software Foundation.
+- **HELM** is a trademark of Incipio Technologies, Inc.
+- **KUBERNETES** is a trademark of THE LINUX FOUNDATION.
+- **Docker** and the Docker logo are trademarks or registered trademarks of Docker, Inc. in the United States and/or other countries.
+  Docker, Inc. and other parties may also have trademark rights in other terms used herein.
+- **Oracle** and **Java** are registered trademarks of Oracle and/or its affiliates. Other names may be trademarks of their respective owners
+- **Ericsson** is the trademark or registered trademark of Telefonaktiebolaget LM Ericsson.

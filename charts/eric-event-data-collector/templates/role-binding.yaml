@@ -1,0 +1,29 @@
+{{- if .Values.global -}}
+  {{- if .Values.global.security -}}
+  {{- if .Values.global.security.policyBinding -}}
+  {{- if .Values.global.security.policyBinding.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ template "eric-event-data-collector.name" . }}-rolebinding
+  labels:
+    app.kubernetes.io/name: {{ include "eric-event-data-collector.name" . }}
+    app.kubernetes.io/version: {{ include "eric-event-data-collector.version" . }}
+    helm.sh/chart: {{ template "eric-event-data-collector.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- include "eric-event-data-collector.user-labels" . | indent 4 }}
+  annotations:
+  {{- include "eric-event-data-collector.securityPolicy.annotations" . | indent 4 }}
+  {{- include "eric-event-data-collector.product-info" . | indent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name:  {{ template "eric-event-data-collector.name" . }}-sa
+roleRef:
+  kind: Role
+  name: {{ include "eric-event-data-collector.securityPolicy.reference" . }}
+  apiGroup: "rbac.authorization.k8s.io"
+    {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- end -}}

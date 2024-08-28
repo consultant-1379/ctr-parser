@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "eric-oss-5gpmevent-filetrans-proc-integration.fullname" . }}
+  labels:
+    app: {{ include "eric-oss-5gpmevent-filetrans-proc-integration.name" . }}
+  annotations:
+    "helm.sh/hook": test-success
+spec:
+  containers:
+    - name: eric-oss-5gpmevent-filetrans-proc-integration-runner
+      image: {{ .Values.testsuite.image.repository }}/{{ .Values.testsuite.image.name }}:{{ .Values.testsuite.image.tag }}
+      imagePullPolicy: IfNotPresent
+      volumeMounts:
+        - name: task-pv-storage
+          mountPath: /stubbed-enm/fls/files
+
+  restartPolicy: Never
+  volumes:
+    - name: scripts
+      configMap:
+        name: {{ template "eric-oss-5gpmevent-filetrans-proc-integration.name" . }}-scripts
+        defaultMode: 0777
+    - name: task-pv-storage
+      persistentVolumeClaim:
+        claimName: eric-oss-5gpmevent-filetrans-proc-pvc
+

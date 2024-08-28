@@ -1,0 +1,4 @@
+{
+    #key is "events" value is integer array  
+	"events": [$eventlist]
+}

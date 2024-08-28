@@ -1,0 +1,38 @@
+#
+# COPYRIGHT Ericsson 2021
+#
+#
+#
+# The copyright to the computer program(s) herein is the property of
+#
+# Ericsson Inc. The programs may be used and/or copied only with written
+#
+# permission from Ericsson Inc. or in accordance with the terms and
+#
+# conditions stipulated in the agreement/contract under which the
+#
+# program(s) have been supplied.
+#
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ template "eric-oss-5gpmevent-filetrans-proc.name" . }}
+  labels:
+    app.kubernetes.io/name: {{ template "eric-oss-5gpmevent-filetrans-proc.name" . }}
+    helm.sh/chart: {{ template "eric-oss-5gpmevent-filetrans-proc.chart" . }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/version: {{ template "eric-oss-5gpmevent-filetrans-proc.version" . }}
+    {{- include "eric-oss-5gpmevent-filetrans-proc.labels" . | indent 4 }}
+    {{- if .Values.labels }}
+      {{ .Values.labels | toYaml | indent 4 }}
+    {{- end }}
+  annotations:
+  {{- include "eric-oss-5gpmevent-filetrans-proc.product-info" . | indent 4 }}
+  {{- include "eric-oss-5gpmevent-filetrans-proc.config-annotations" . | indent 4 }}
+spec:
+  minAvailable: {{ template "eric-oss-5gpmevent-filetrans-proc.pod-disruption-budget" . }}
+  selector:
+    matchLabels:
+      app: {{ template "eric-oss-5gpmevent-filetrans-proc.name" . }}

@@ -1,0 +1,88 @@
+#
+# COPYRIGHT Ericsson 2021
+#
+#
+#
+# The copyright to the computer program(s) herein is the property of
+#
+# Ericsson Inc. The programs may be used and/or copied only with written
+#
+# permission from Ericsson Inc. or in accordance with the terms and
+#
+# conditions stipulated in the agreement/contract under which the
+#
+# program(s) have been supplied.
+#
+
+#Metrics related configurations
+management.endpoint.metrics.enabled: "true"
+management.endpoints.web.exposure.include: "*"
+management.endpoint.prometheus.enabled: "true"
+management.metrics.export.prometheus.enabled: "true"
+management.metrics.web.server.auto-time-requests: "true"
+
+#opentracing.jaeger.enabled: "true"
+
+endpoints.health.sensitive: "false"
+info.app.name: '@name@'
+info.app.description: Microservice chassis app
+info.app.version: '@version@'
+info.app.legal: "COPYRIGHT Ericsson 2021 -
+ The copyright to the computer program(s) herein is the property of
+ Ericsson Inc. The programs may be used and/or copied only with written
+ permission from Ericsson Inc. or in accordance with the terms and
+ conditions stipulated in the agreement/contract under which the
+ program(s) have been supplied."
+
+#See more details about pattern layout: https://logging.apache.org/log4j/1.2/apidocs/org/apache/log4j/PatternLayout.html
+#See more details about logging.pattern.level : https://docs.spring.io/spring-boot/docs/2.5.2/reference/html/features.html#features.logging.custom-log-configuration
+#logging.pattern.level: "%5p [%X{X-B3-TraceId:-},%X{X-B3-SpanId:-},%X{X-Span-Export:-}][%X{userName}]"
+
+#Set the stubrunner credentials:
+#stubrunner.username: <LAN SIGNUM ID>
+#stubrunner.password: <LAN encripted PWD or JFrog API Key>
+stubrunner.username: ${SELI_ARTIFACTORY_REPO_USER}
+stubrunner.password: ${SELI_ARTIFACTORY_REPO_PASS}
+
+temp-directory: "/tmp/"
+
+#TODO: Update input topic name to agreed name
+spring:
+  kafka:
+#TODO kept for dev cluster
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVER:eric-pm-events-message-bus-kf:9092}
+    consumer:
+      group-id: group_id
+      auto-offset-reset: earliest
+    topics:
+      input:
+        name: ${EPS_INPUT_TOPIC_5G:celltraceInputFiles5G}
+        partition.assignment.strategy: ${SPRING_KAFKA_TOPICS_INPUT_PARTITION_ASSIGNMENT_STRATEGY:org.apache.kafka.clients.consumer.CooperativeStickyAssignor}
+        session.timeout.ms: ${SPRING_KAFKA_TOPICS_INPUT_SESSION_TIMEOUT_MS:30000} # default value of 30s when no env vars found
+      output:
+        name: ${CELLTRACE_DECODED_TOPIC_5G:celltraceDecoded5G}
+        partitions: ${SPRING_KAFKA_TOPICS_OUTPUT_PARTITIONS:3} # default value of 3 when no env vars found
+        replicas: ${SPRING_KAFKA_TOPICS_OUTPUT_REPLICAS:3} # default value of 3 when no env vars found
+        compression-type: ${SPRING_KAFKA_TOPICS_OUTPUT_COMPRESSION_TYPE:lz4} # default value of "lz4" when no env vars found
+        batch-size: ${SPRING_KAFKA_TOPICS_OUTPUT_BATCH_SIZE:1000000} # default value of 1MB when no env vars found
+        buffer-memory: ${SPRING_KAFKA_TOPICS_OUTPUT_BUFFER_MEMORY:1000000} # default value of 1MB when no env vars found
+        max-request-size: ${SPRING_KAFKA_TOPICS_OUTPUT_MAX_REQUEST_SIZE:50000000} # default value of 50MB when no env vars found
+        linger: ${SPRING_KAFKA_TOPICS_OUTPUT_LINGER:15} # default value of 15ms when no env vars found
+        acks: ${SPRING_KAFKA_TOPICS_OUTPUT_ACKS:all}  # default value of all when no env vars found
+  jmx:
+    enabled: true
+  profiles:
+    active: prod
+connected:
+  systems:
+    url: ${CONNECTED_SYSTEMS_URL:http://eric-eo-subsystem-management/subsystem-manager/v1/subsystems/}
+
+dmm:
+  data-catalog:
+    base-url: ${DMM_DATA_CATALOG_BASE_URL:http://eric-oss-data-catalog:}
+    base-port: ${DMM_DATA_CATALOG_BASE_PORT:9590}
+    notification-topic-uri: ${DMM_DATA_CATALOG_NOTIFICATION_TOPIC_URI:/catalog/v1/notification-topic/}
+    file-format-uri: ${DMM_DATA_CATALOG_FILE_FORMAT_URI:/catalog/v1/file-format/}
+    data-provider-type: ${DMM_DATA_CATALOG_DATA_PROVIDER_TYPE:5G}
+    data-space: ${DMM_DATA_CATALOG_DATA_SPACE:enm}
+    data-category: ${DMM_DATA_CATALOG_DATA_CATEGORY:PM_CELLTRACE}

@@ -1,0 +1,44 @@
+{
+	"type": "PUBLISHER",
+	"properties": [{
+			"name": "request.timeout.ms",
+			"value": "60000"
+		}, {
+			"name": "bootstrap.servers",
+			"value": "eric-data-message-bus-kf:9092"
+		}, {
+			"name": "acks",
+			"value": "all"
+		}, {
+			"name": "retries",
+			"value": "0"
+		}, {
+			"name": "batch.size",
+			"value": "1048576"
+		}, {
+			"name": "linger.ms",
+			"value": "2000"
+		}, {
+			"name": "buffer.memory",
+			"value": "104857600"
+		}, {
+			"name": "partition_count",
+			"value": "3"
+		}
+	],
+	"destinations": [{
+			"name": "epsOut",
+			"properties": [{
+					"name": "key.serializer",
+					"value": "org.apache.kafka.common.serialization.StringSerializer"
+				}, {
+					"name": "value.serializer",
+					"value": "com.ericsson.component.aia.common.avro.kafka.encoder.KafkaGenericRecordEncoder"
+				}, {
+					"name": "partitioner.class",
+					"value": "com.ericsson.component.aia.services.exteps.io.adapter.partition.ENodeBIdPartitioner"
+				}
+			]
+		}
+	]
+}

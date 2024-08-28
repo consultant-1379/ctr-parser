@@ -1,0 +1,26 @@
+= Event Data Collector Service - Additional Documents in the ADP Marketplace
+:author: Donnacha Bushe
+:doc-name: Event Data Collector Service - Additional Documents in the ADP Marketplace
+:doc-no: -
+:revnumber: PA1
+:revdate: {sys: date +%Y-%m-%d}
+:approved-by-name: Mohamed Ibrahim C
+:approved-by-department: BDGSBECA
+
+== Overview
+The following are additional documents for the **Event Data Collector** service.
+
+https://adp.ericsson.se/marketplace/documentation/2a515e3ec58f19be78505f6890009795/Application%20Developers%20Guide[Application Developers Guide]::
+Refer to the **Interface Description** chapter of the **Application Developers Guide** for API-relevant information.
+
+https://gerrit.ericsson.se/plugins/gitiles/AIA/microservices/ctr-parser/+/master/README.md[Inner source, README]::
+Inner source instructions specific to the service, explaining how to get started.
+
+https://gerrit.ericsson.se/plugins/gitiles/AIA/microservices/ctr-parser/+/master/CONTRIBUTING.md[Inner source, CONTRIBUTING]::
+Inner source instructions specific to the service, explaining how to contribute.
+
+https://erilink.ericsson.se/eridoc/erl/objectId/09004cffc1413769?docno=24050-CXC2011895/1Uen&action=approved&format=pdf[Software Vendor List]::
+A list of software vendors for the service.
+
+https://confluence.lmera.ericsson.se/display/AA/Event+Data+Collector+Component+Description+Document[Component Description]::
+An overview of the use cases that the service supports.

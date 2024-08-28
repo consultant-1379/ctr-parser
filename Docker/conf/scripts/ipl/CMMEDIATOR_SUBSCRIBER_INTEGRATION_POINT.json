@@ -1,0 +1,38 @@
+{
+	"type": "SUBSCRIBER",
+	"properties": [{
+			"name": "bootstrap.servers",
+			"value": "eric-data-message-bus-kf:9092"
+		}, {
+			"name": "group.id",
+			"value": "filterEventListConsumerGrp"
+		}, {
+			"name": "auto.offset.reset",
+			"value": "latest"
+		}, {
+			"name": "enable.auto.commit",
+			"value": "true"
+		}, {
+			"name": "session.timeout.ms",
+			"value": "15000"
+		}, {
+			"name": "auto.commit.interval.ms",
+			"value": "1000"
+		}, {
+			"name": "partition_count",
+			"value": "3"
+		}
+	],
+	"destinations": [{
+			"name": "filterEventList",
+			"properties": [{
+					"name": "key.deserializer",
+					"value": "org.apache.kafka.common.serialization.StringDeserializer"
+				}, {
+					"name": "value.deserializer",
+					"value": "org.apache.kafka.common.serialization.StringDeserializer"
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,86 @@
+# Default values for eric-oss-5gpmevent-filetrans-proc-integration.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# As default registry path, the global registry path will be used.
+global:
+  pullSecret:
+  registry:
+    url: armdocker.rnd.ericsson.se
+    pullPolicy: IfNotPresent
+  security:
+    tls:
+      enabled: false
+
+testsuite:
+  image:
+    repository: armdocker.rnd.ericsson.se/proj-ec-son-ci-internal
+    name: NAME
+    tag: VERSION
+
+resources:
+  eric-oss-5gpmevent-filetrans-proc:
+    requests:
+      memory: 256Mi
+      cpu: 125m
+      ephemeral-storage: ""
+    limits:
+      memory: 1Gi
+      cpu: 500m
+      ephemeral-storage: ""
+  eric-data-coordinator-zk:
+    requests:
+      memory: 128Mi
+      cpu: 50m
+      ephemeral-storage: ""
+    limits:
+      memory: 512Mi
+      cpu: 256m
+      ephemeral-storage: ""
+  eric-data-message-bus-kf:
+    requests:
+      memory: 128Mi
+      cpu: 50m
+      ephemeral-storage: ""
+    limits:
+      memory: 512Mi
+      cpu: 256m
+      ephemeral-storage: ""
+
+images:
+  eric-oss-5gpmevent-filetrans-procTest:
+    repoPath: REPO_PATH
+    name: NAME
+    tag: VERSION
+
+imageCredentials:
+  repoPath: REPO_PATH
+  logRepoPath: proj-adp-log-released
+  registry:
+    url: # overrides global registry url
+  pullSecret:
+
+  eric-oss-5gpmevent-filetrans-proc:
+    pullPolicy: IfNotPresent
+    repoPath: REPO_PATH
+    registry: {}
+  eric-oss-5gpmevent-filetrans-procTest:
+    repoPath: REPO_PATH
+    name: NAME
+    tag: VERSION
+
+stubbed-enm:
+  enabled: true
+  volumeMounts:
+    - name: testfiles-pvc
+      mountPath: /stubbed-enm/fls/files
+  volumes:
+    - name: testfiles-pvc
+      persistentVolumeClaim:
+        claimName: 'eric-oss-5gpmevent-filetrans-proc-pvc'
+
+celltrace:
+  persistentVolumeClaim:
+    enabled: true
+    claimName: 'eric-oss-5gpmevent-filetrans-proc-pvc'
+    mountPath: '/tmp/files'

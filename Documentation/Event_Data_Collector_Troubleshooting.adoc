@@ -1,0 +1,282 @@
+= Event Data Collector - Troubleshooting Guide
+:author: Donnacha Bushe
+:doc-name: Event Data Collector Service - Troubleshooting Guide
+:doc-no: 1/15451-CAV 101 049/1
+:revnumber: A
+:revdate: {sys: date +%Y-%m-%d}
+:approved-by-name: Mohamed Ibrahim C
+:approved-by-department: BDGSBECA
+
+== Introduction
+
+This guide is designed to help engineers troubleshoot the **Event Data Collector
+Service** and write Trouble Reports (TRs). The guide
+provides the following information:
+
+* Simple verification and possible recovery.
+
+* The required information when writing a TR or a support case, including
+  all files and system logs that are needed.
+
+* How to retrieve the above information from the system.
+
+== Prerequisites
+
+* `kubectl` CLI tool properly configured
+
+[[Respond]]
+== Respond to Specific Issues
+
+[[RenameMBKF]]
+===  Ensure EDC Can Connect to the Message Bus KF Service if the Message Bus KF Service is Renamed
+
+The connection to the **Message Bus KF Service** is handled in the`bootstrap.servers` parameter in the IPL files. 
+Override all IPL configuration files to supply the new name of **Message Bus KF Service**:
+
+* `ctrParser.ipl.subscriber.subscriberFileContent`
+* `ctrParser.ipl.publisher.publisherFileContent`
+* `ctrParser.ipl.subscriber.cmMediator_subscriberFileContent`
+
+Refer to the Application Developers Guide <<DevGuide>> for further details on these parameters.
+
+The `values.yaml` excerpt below is an example of how to override the `ctrParser.ipl.subscriber.publisherFileContent` parameter.
+
+[subs=+quotes]
+----
+eric-event-data-collector:
+  ctrParser:
+    ipl:
+      publisher:
+        publisherFileContent: |
+          {
+            "type": "PUBLISHER",
+            "properties": [
+            {
+                "name": "request.timeout.ms",
+                "value": "120000"
+            },
+            {
+                "name": "bootstrap.servers",
+                "value": *"RENAMED-MBKF-SERVICE:9092"*
+            },
+            {
+                "name": "acks",
+                "value": "all"
+            },
+            {
+                "name": "retries",
+                "value": "0"
+            },
+            {
+                "name": "batch.size",
+                "value": "100000"
+            },
+            {
+                "name": "linger.ms",
+                "value": "2000"
+            },
+            {
+                "name": "buffer.memory",
+                "value": "104857600"
+            }
+            ],
+            "destinations": [
+                {
+                "name": "epsOut",
+                "properties": [
+                {
+            "name": "key.serializer",
+            "value": "org.apache.kafka.common.serialization.StringSerializer"
+                },
+                {
+            "name": "value.serializer",
+            "value": "com.ericsson.component.aia.common.avro.kafka.encoder.KafkaGenericRecordEncoder"
+                },
+                {
+            "name": "partitioner.class",
+            "value": "com.ericsson.component.aia.services.exteps.io.adapter.partition.ENodeBIdPartitioner"
+                }
+            ]
+                }
+            ]
+          }
+
+----
+
+
+
+===  Ensure EDC Can Connect to the CM Mediator Service if the CM Mediator Service is Renamed
+
+The connection to the **CM Mediator Service** is specified in the `values.yaml` file. The relevant setting `eventFilterPath` is located in the `ctrParser.flow.flow.xml` parameter.
+
+
+
+The `values.yaml` excerpt below is an example of how to override the `ctrParser.flow.flow.xml` parameter.
+
+[subs=+quotes]
+----
+eric-event-data-collector:
+  ctrParser:
+    flow:
+      flow.xml: |
+        <?xml version="1.0"?>
+        <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+        <FlowDefinition xmlns:oc="urn:com:ericsson:schema:xml:oss:oss_common" xmlns="urn:com:ericsson:schema:xml:oss:fbp_flow" oc:ns="com.ericsson.oss.services" oc:name="EsnSolutionSet" oc:version="1.0.0">
+          <oc:modelCreationInfo author="easchud" creationDate="10/07/2018">
+          <oc:designedModel componentId="avroParserEps"/>
+          </oc:modelCreationInfo>
+          <oc:desc>Parse input CTR files and filter out the desired decode events to kafka output topic.</oc:desc>
+          <input name="kafkaInputAdaptor">
+            <attribute name="uri" value="generic:/" />
+            <attribute name="integration.point.uri" value="local:///ericsson/apeps/flow" />
+            <attribute name="integration.point.name" value="SUBSCRIBER_INTEGRATION_POINT" />
+          </input>
+
+          <input name="cmMediatorKafkaInputAdaptor">
+            <attribute name="uri" value="generic:/" />
+            <attribute name="integration.point.uri" value="local:///ericsson/apeps/flow" />
+            <attribute name="integration.point.name" value="CMMEDIATOR_SUBSCRIBER_INTEGRATION_POINT" />
+          </input>
+
+          <output name="kafkaOutputAdapter">
+            <attribute name="uri" value="avro:/"/>
+            <attribute name="integration.point.uri" value="local:///ericsson/apeps/flow" />
+            <attribute name="integration.point.name" value="PUBLISHER_INTEGRATION_POINT" />
+          </output>
+
+          <step name="pmFileParser">
+            <handler>
+          <className>com.ericsson.component.aia.services.exteps.eh.parser.PMFileParser</className>
+            </handler>
+            <attribute name="schematype" value="celltrace"/>
+            <attribute name="decodedEventType" value="generic_record"/>
+            <attribute name="eventFilterPath" value="*http://NEW-RENAMED-CM-MEDIATOR:5003/cm/api/v1/configurations/eventlist*"/>
+          </step>
+
+          <path>
+            <from uri="kafkaInputAdaptor"/>
+            <to uri="pmFileParser" />
+            <to uri="kafkaOutputAdapter" />
+          </path>
+          <path>
+            <from uri="cmMediatorKafkaInputAdaptor"/>
+            <to uri="pmFileParser" />
+          </path>
+
+        </FlowDefinition>
+----
+
+
+===  Ensure EDC Can Connect to the Schema Registry SR Service if the Schema Registry SR Service is Renamed 
+
+The connection to the **Schema Registry SR Service** is specified in the `values.yaml` file. The relevant parameter is `ctrParser.schemaRegistry.serviceName`.
+
+[subs=+quotes]
+----
+eric-event-data-collector:
+  ctrParser:
+    schemaregistry:
+      ServiceName: *renamedSchemaRegistry*
+----
+
+[[Troubleshooting]]
+== Troubleshooting
+
+This section describes the troubleshooting functions and procedures for the
+**Event Data Collector
+Service**.
+
+=== Event Data Collector Cannot Communicate with Renamed Message Bus KF Service
+
+When the **Message Bus KF Service** was renamed using `nameOverride` or `alias`, 
+the following error error appears in the **Event Data Collector** logs.
+
+
+[subs=+quotes]
+----
+
+018-12-17 15:04:39.062 [main] WARN org.apache.kafka.clients.ClientUtils - Removing server *eric-data-message-bus-kf:9092* from bootstrap.servers as *DNS resolution failed for eric-data-message-bus-kf*
+018-12-17 15:04:39.062 [main] INFO c.e.c.a.c.a.k.e.KafkaGenericRecordEncoder - 'Close' method was invoked but it hasn't been implemented for KafkaGenericRecordEncoder 
+018-12-17 15:04:39.945 [main] ERROR c.e.c.a.s.e.c.m.a.i.DefaultEpsModuleInstallerImpl - Caught exception while initializing component [kafkaOutputAdapter]. Details: Failed to construct kafka producer. Will invoke destroy() method on this component and propagate exception! org.apache.kafka.common.KafkaException: Failed to construct kafka producer at org.apache.kafka.clients.producer.KafkaProducer.<init>(KafkaProducer.java:441) ~[kafka-clients-1.0.1.jar:na] at org.apache.kafka.clients.producer.KafkaProducer.<init>(KafkaProducer.java:297) ~[kafka-clients-1.0.1.jar:na] 
+    at com.ericsson.aia.ipl.util.ServiceProviderInstanceHelper.getKafkaProducer(ServiceProviderInstanceHelper.java:47) ~[IntegrationPointLibrary-1.0.17.jar:1.0.17] 
+    ...
+    at com.ericsson.component.aia.services.eps.core.main.EpsApplication.main(EpsApplication.java:64) [eps-jse.jar:3.0.13] caused by: org.apache.kafka.common.config.ConfigException: *No resolvable bootstrap urls given in bootstrap.servers* at org.apache.kafka.clients.ClientUtils.parseAndValidateAddresses(ClientUtils.java:64) "[kafka-clients-1.0.1.jar:na] at 
+
+018-12-17 15:04:39.947 [main] INFO c.e.c.a.s.e.i.a.i.AvroOutputAdapter - Shutting down com.ericsson.component.aia.services.exteps.io.adapter.ipl.AvroOutputAdapter ... 
+...
+
+----
+
+Follow the steps provide in <<RenameMBKF>> to address this issue.
+
+
+=== Restarting the Event Data Collector Kubernetes pod
+
+The Event Data Collector Kubernetes pod(s) can be restarted if needed to resolve problems
+related to the **Event Data Collector** Service.
+Potential problems include:
+
+ * Issues refreshing the event filter list
+ * Failure to mount additional Kubernetes volumes
+
+Run the following commands to restart the pod.
+
+    kubectl get pods --namespace=<pod's namespace>
+    kubectl get pod <pod name> --namespace=<pod's namespace> -o yaml | kubectl replace --force -f -
+
+=== Enable debug logging
+
+Only enable debug logging in order to troubleshoot a problem that can
+be reproduced. Debug logging may impact performance.
+
+Set the following parameter in your `values.yaml` to enable debug logging.
+
+   ctr.Parser.logging.rootLoggerLevel: "debug"
+
+
+Follow the steps in the Upgrade section of the deployment
+guide to update the pods with the new logging level. This will restart the **Event Data Collector**
+pods.
+
+[[DataColl]]
+== Data Collection
+
+* The logs are collected from each pod using command:
+
+    kubectl logs <pod name> --namespace=<pod's namespace> > <log file name>.txt
+
+* The detailed information about the pod are collected using command:
+
+    kubectl describe pod <pod name> --namespace=<pod's namespace>
+    kubectl exec <pod-name> --namespace=<pod's namespace> env
+
+== Trouble Reports and Additional Support
+
+Issues can be handled in different ways, as listed below:
+
+* For questions, support or hot requesting, see xref:chAdditional_Support[].
+* For reporting of faults, see xref:chTrouble_Reports[].
+
+[[chAdditional_Support]]
+== Additional Support
+
+If there are **Event Data Collector** Service support issues, use the JIRA <<Help>>.
+
+[[chTrouble_Reports]]
+== Trouble Reports
+
+If there is a suspected fault, raise a trouble report (TR). The TR must
+contain specific **Event Data Collector
+Service** information and all applicable troubleshooting
+information highlighted in the xref:Troubleshooting[], and xref:DataColl[].
+
+Note if the suspected fault can be resolved by restarting the pod.
+
+
+[bibliography]
+References
+----------
+
+[bibliography]
+- [[Help]] OSS Specific Services Support JIRA: https://jira-nam.lmera.ericsson.se/browse/OSSBSS
+- [[DevGuide]] Event Data Collector Service - Application Developer Guide doc-no: [1/198 17-CAV 101 049/1]

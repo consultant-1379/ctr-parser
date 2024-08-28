@@ -1,0 +1,134 @@
+tags:
+  logging: false
+eric-data-coordinator-zk:
+  persistantVolumeClaim:
+    storageClassName: "default"
+eric-data-message-bus-kf:
+  persistentVolumeClaim:
+    storageClassName: "default"
+  jmx:
+    enabled: true
+  configurationOverrides:
+    "log.retention.minutes": 30
+  cpu: "200m"
+  memory: "1024Mi"
+  maxCpu: "600m"
+  maxMemory: "3072Mi"
+eric-data-document-database-pg:
+  postgresDatabase: lookup
+  postgresPassword: cmpw
+  postgresUser: cm
+eric-data-processor-s:
+  volumes: |
+    - name: eric-data-engine-sk-checkpoint
+      nfs:
+        path: "/exports"
+        server: 10.150.66.239
+  volumeMounts: |
+    - name: eric-data-engine-sk-checkpoint
+      mountPath: "/checkpoints"
+      subPath: ci
+      readOnly: false
+eric-event-data-collector:
+  ctrParser:
+    schemaRegistry:
+      serviceName: eric-oss-schema-registry-sr
+      port: "8081"
+  volumes: |
+    - name: eric-event-data-collector-pmdata
+      nfs:
+        server: 10.150.66.239
+        path: "/exports"
+  volumeMounts: |
+    - name: eric-event-data-collector-pmdata
+      mountPath: "/ctr_data"
+      subPath: 15k1rop
+      readOnly: true
+schema-importer:
+  schemaregistry:
+    clientServiceName: "eric-oss-schema-registry-sr"
+  schemaImporterDir: /exports/avro_schemas
+  dataDirectory: /exports
+  dataMountServer: 10.150.66.239
+eric-pm-server:
+  server:
+    service:
+      type: NodePort
+    serviceAccountName: monitoring
+    ingress:
+      enabled: true
+      hosts:
+        - pm.server.ieatenmpcbfl-219.athtem.eei.ericsson.se
+  clusterRoleName: aia-eson-pm-server
+eric-cm-mediator:
+  backend:
+    hostname: eric-data-document-database-pg
+    dbname: lookup
+  kafka:
+    hostname: eric-data-message-bus-kf
+  service:
+    type: NodePort
+eric-data-search-engine:
+  client:
+    jvmHeap: 1G
+    replicas: 2
+    resources:
+      limits:
+        memory: 2Gi
+  data:
+    jvmHeap: 1G
+    accessMode: ReadWriteOnce
+    storageAllocation: 10Gi
+    replicas: 2
+    resources:
+      limits:
+        memory: 2Gi
+  master:
+    jvmHeap: 1G
+    resources:
+      limits:
+        memory: 2Gi
+eric-data-visualizer-kb:
+  service:
+    type: NodePort
+    externalPort: 31000
+  ingress:
+    enabled: true
+    hosts:
+      - kb.server.ibd1.ericsson.se
+  logtransformer:
+    host: eric-log-transformer
+eric-log-shipper:
+  useFullCfg: true
+  additionalVolumeMounts: |
+    - name: dockerlog
+      mountPath: /var/lib/docker/
+  additionalVolumes: |
+    - name: dockerlog
+      hostPath:
+        path: /var/lib/docker/
+  logshipper:
+    serviceAccountName: monitoring
+    cfgData: |
+      filebeat.prospectors:
+      - input_type: log
+        paths:
+          - /var/lib/docker/overlay2/*/diff/opt/spark-*/work-dir/*/std*
+          - /var/lib/docker/overlay2/*/diff/opt/spark-*/work-dir/*/*/std*
+          - /var/lib/docker/containers/*/*.log
+        fields:
+          logplane: kubelog
+        fields_under_root: true
+        tail_files: true
+        processors:
+          - add_kubernetes_metadata:
+              in_cluster: true
+      output.logstash:
+        hosts: '${LOGSTASH_HOSTS}'
+eric-log-transformer:
+  jvmHeap: 2G
+  replicaCount: 2
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 4Gi

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlowDefinition xmlns="urn:com:ericsson:schema:xml:oss:fbp_flow" xmlns:oc="urn:com:ericsson:schema:xml:oss:oss_common" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" oc:ns="com.ericsson.oss.services" oc:name="CSLSolutionSet" oc:version="1.0.0">
+<oc:modelCreationInfo author="easchud Test" creationDate="17/8/2018">
+<oc:designedModel componentId="BatchProcessingSpark" />
+</oc:modelCreationInfo>
+<oc:desc>EPS BIT flow</oc:desc>
+
+#foreach ($adatper in $ipAdatperlist) 
+<input name="${adatper.get('name')}"> 
+#foreach($key in ${adatper.keySet()} ) 
+	#if ($key != "name")
+	<attribute name="$key" value="${adatper.get($key)}" />
+	#end
+#end
+</input>
+#end
+
+
+#foreach ($adatper in $opAdatperlist) 
+<output name="$adatper.get('name')"> 
+#foreach($key in $adatper.keySet() )
+	#if ($key != "name")
+	<attribute name="$key" value="$adatper.get($key)" />
+	#end
+#end
+</output>
+#end   
+
+#foreach ($adatper in $attributeStepMap) 
+<step name="pmFileParser">
+#foreach($key in $adatper.keySet() )
+	#if ($key == "handler")
+	<handler><className>$adatper.get($key)</className></handler>
+	#else
+	<attribute name="$key" value="$adatper.get($key)" />
+	#end
+#end
+</step>
+#end
+
+<path>  
+#foreach ($adatper in $ipAdatperlist)
+	#if ($velocityCount == 1)
+<from uri="$adatper.get('name')" />
+	#else
+<to uri="$adatper.get('name')" />       
+	#end
+#end         
+<to uri="pmFileParser" />
+#foreach ($adatper in $opAdatperlist)
+	<to uri="$adatper.get('name')" />
+#end 
+</path>
+
+</FlowDefinition>

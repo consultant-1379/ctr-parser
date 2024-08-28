@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.ericsson.oss.services.sonom</groupId>
+        <artifactId>eric-event-data-collector</artifactId>
+        <version>1.0.38-SNAPSHOT</version>
+    </parent>
+
+    <groupId>com.ericsson.oss.services.sonom</groupId>
+    <version>1.0.38-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <artifactId>eric-event-data-collector-testsuite</artifactId>
+    <name>[eric-event-data-collector] TestSuite</name>
+
+    <modules>
+        <module>integration</module>
+    </modules>
+
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.release>1.8</maven.compiler.release>
+
+        <!-- SON Versions -->
+        <version.son-common>1.0.592</version.son-common>
+
+        <!-- All dependencies in the 3PP section MUST have a comment linking to Bazaar and its current STAKO classification -->
+        <!-- STAKO states: -->
+        <!-- ESW2 means it is fine to use -->
+        <!-- ESW3 means it needs to be checked with the CNA, this state could be because the 3PP is no longer maintained, or because there are too many licenses -->
+        <!-- ESW4 means not permitted for new design, and cannot be added -->
+        <!-- 3PP Dependency Versions -->
+
+        <version.commons-lang3>3.12.0</version.commons-lang3> <!-- ESW2: https://bazaar.internal.ericsson.com/b-view-component.php?componentid=955584&category= -->
+        <version.jaxrs-api>3.0.6.Final</version.jaxrs-api> <!-- https://bazaar.internal.ericsson.com/b-view-component.php?componentid=16826 -->
+        <version.javaee-web-api>6.0</version.javaee-web-api> <!-- Not found in Bazaar -->
+        <version.javax.javaee-api>7.0</version.javax.javaee-api> <!-- https://bazaar.internal.ericsson.com/b-view-component.php?componentid=19111 -->
+        <version.json-schema-core>1.2.14</version.json-schema-core>  <!-- https://bazaar.internal.ericsson.com/b-view-component.php?componentid=936351 -->
+        <version.json-schema-validator>2.2.14</version.json-schema-validator> <!-- https://bazaar.internal.ericsson.com/b-view-component.php?componentid=936371 -->
+        <version.slf4j>1.7.33</version.slf4j> <!-- https://bazaar.internal.ericsson.com/b-view-component.php?componentid=1000862 -->
+        <version.slf4j-log4j12>1.7.33</version.slf4j-log4j12>
+
+        <!-- Test Dependency Versions -->
+        <version.assertj-core>3.13.2</version.assertj-core>
+        <version.cucumber>6.2.0</version.cucumber> <!-- https://bazaar.internal.ericsson.com/b-view-component.php?componentid=939020 -->
+        <version.hamcrest>1.3</version.hamcrest>
+        <version.javax.annotation-api>1.3</version.javax.annotation-api>
+        <version.junit>4.12</version.junit>
+        <version.springframework>5.3.4</version.springframework>
+        <version.super-csv>2.4.0</version.super-csv>
+        <version.maven-dependency-plugin>3.2.0</version.maven-dependency-plugin>
+        <version.maven-assembly-plugin>3.1.0</version.maven-assembly-plugin>
+        <version.maven-surefire-plugin>3.0.0-M4</version.maven-surefire-plugin>
+        <version.maven-compiler-plugin>3.0.0-M4</version.maven-compiler-plugin>
+        <version.log4j>2.17.1</version.log4j>  <!-- https://bazaar.internal.ericsson.com/b-view-component.php?componentid=993415 -->
+        <version.log4j-slf4j-impl>2.17.1</version.log4j-slf4j-impl> <!-- https://bazaar.internal.ericsson.com/b-view-component.php?componentid=902128 -->
+
+        <!-- Static analyzer versions-->
+        <spotbugs.version>4.0.0</spotbugs.version> <!-- ESW2 https://bazaar.internal.ericsson.com/b-view-component.php?componentid=936106&category= -->
+        <spotbugs-maven-plugin.version>4.0.0</spotbugs-maven-plugin.version>
+        <pitest-maven.version>1.4.3</pitest-maven.version>
+
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- SON Dependencies -->
+            <dependency>
+                <groupId>com.ericsson.oss.services.sonom</groupId>
+                <artifactId>son-common-kafka</artifactId>
+                <version>${version.son-common}</version>
+            </dependency>
+
+            <!-- 3PP Dependencies -->
+            <!-- Test Dependencies -->
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>${version.assertj-core}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.cucumber</groupId>
+                <artifactId>cucumber-core</artifactId>
+                <version>${version.cucumber}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.cucumber</groupId>
+                <artifactId>cucumber-java</artifactId>
+                <version>${version.cucumber}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.cucumber</groupId>
+                <artifactId>cucumber-junit</artifactId>
+                <version>${version.cucumber}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${version.junit}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.ericsson.oss.services.sonom</groupId>
+                <artifactId>son-common-test</artifactId>
+                <version>${version.son-common}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-test</artifactId>
+                <version>${version.springframework}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

@@ -1,0 +1,333 @@
+modelVersion: 2.0
+
+description: "EC SON: Event Data Collector(EDC) (eric-event-data-collector)"
+
+# See image catalog: https://confluence.lmera.ericsson.se/display/ACD/ADP+CICD+Docker+Image+Catalog
+docker-images:
+  - adp-release-auto: armdocker.rnd.ericsson.se/sandbox/adp-staging/adp-cicd/bob-adp-release-auto:${env.ADP_RELEASE_AUTO_TAG}
+  - doc-builder: armdocker.rnd.ericsson.se/sandbox/adp-staging/adp-cicd/bob-docbuilder:${env.DOC_BUILDER_TAG}
+  - adp-maven-builder: armdocker.rnd.ericsson.se/proj-adp-cicd-drop/bob-java11mvnbuilder:${env.MVN_BUILDER_TAG}
+  - py3kubehelm: armdocker.rnd.ericsson.se/proj-adp-cicd-drop/bob-py3kubehelmbuilder:latest
+
+# List of constants
+properties:
+  - image-name: event-data-collector
+  - image-name-adc: eric-oss-5gpmevent-filetrans-proc
+  - image-registry: armdocker.rnd.ericsson.se
+  - image-drop-repopath: proj-ec-son-drop
+  - image-ci-repopath: proj-ec-son-ci-internal
+  - image-full-name: ${image-registry}/${image-drop-repopath}/${image-name}
+  - image-full-name-adc: ${image-registry}/${image-drop-repopath}/${image-name-adc}
+
+  - helm-chart-name: eric-event-data-collector
+  - helm-chart-name-adc: eric-oss-5gpmevent-filetrans-proc
+  - helm-chart-file-name: ${helm-chart-name}-${var.version}.tgz
+  - helm-chart-file-name-adc: ${helm-chart-name-adc}-${var.version}.tgz
+  - helm-chart-repo-server: https://arm.epk.ericsson.se/artifactory
+  - helm-chart-drop-repopath: proj-ec-son-drop-helm
+  - helm-chart-drop-repo: ${helm-chart-repo-server}/${helm-chart-drop-repopath}
+  - helm-chart-repo-ci-server: https://arm.seli.gic.ericsson.se/artifactory
+  - helm-chart-ci-repopath: proj-ec-son-ci-internal-helm
+  - helm-chart-ci-drop-repo: ${helm-chart-repo-ci-server}/${helm-chart-ci-repopath}
+
+  - git-user: ejenksonom
+  - git-repo-path: AIA/microservices/ctr-parser
+  - git-repo-url: ssh://${git-user}@gerrit.ericsson.se:29418/${git-repo-path}
+  - git-repo: https://gerrit.ericsson.se/#/admin/projects/${git-repo-path}
+
+  - ADC-DOCKER-DIR: ./eric-oss-5gpmevent-filetrans-proc
+  - HELM_INTEGRATION_DOCKER_DIR: ./testsuite/integration/jee
+
+# Import environment variables (e.g. Jenkins parameters)
+env:
+  - ADP_HELM_DR_CHECK_TAG (default=4.0.0-44)
+  - ADP_RELEASE_AUTO_TAG (default=2.0.0-11)
+  - DOC_BUILDER_TAG (default=1.0.0-3)
+  - MVN_BUILDER_TAG (default=latest)
+  - DOCKER_NETWORK (default=--network host)
+  - PWD
+  - KUBECONFIG (default=notset)
+  - API_TOKEN
+  - HELM_USER
+  - GERRIT_PATCHSET_REVISION (default=HEAD)
+  - GERRIT_USERNAME
+  - GERRIT_PASSWORD
+  - GERRIT_CHANGE_NUMBER
+  - JIRA_USERNAME
+  - JIRA_PASSWORD
+  - ERIDOC_USERNAME
+  - ERIDOC_PASSWORD
+  - MAVEN_OPTS (default=-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn)
+  - IMAGE_REPO
+  - IMAGE_NAME
+  - IMAGE_TAG
+  - EMAIL
+
+var:
+  - version
+  - commithash
+  - image-repopath-internal
+  - image-full-name-internal
+  - image-full-name-internal-adc
+  - helm-chart-repo-internal
+  - HELM_REPO_API_TOKEN
+  - CREDENTIALS_SEKA_ARTIFACTORY_PSW
+  - CREDENTIALS_SEKI_ARTIFACTORY_PSW
+
+# Rules to execute
+rules:
+  # An integrated rule to execute multiple rules in one place.
+  release:
+    - rule: clean
+    - rule: init-dev
+    - rule: init-review
+    - rule: init-drop
+    - rule: image
+    - rule: package-local
+    - rule: package
+    - rule: lint
+    - rule: publish
+
+  # Clean workspace
+  clean:
+    - task: rm
+      cmd:
+        - rm -rf .bob/
+        - rm -rf build/
+    - task: mvn-clean
+      docker-image: maven-builder
+      cmd: mvn clean
+
+  # CI-Internal Tasks: used by CI to use as temporary storage for testing, only CI user has write access.
+  init-review:
+    - task: version
+      docker-image: adp-release-auto
+      cmd: generate-version --is-release false --output version
+    - task: commit
+      docker-image: adp-release-auto
+      cmd: git rev-parse --short HEAD > .bob/var.commithash
+    - task: image-repopath-internal
+      cmd: echo "${image-ci-repopath}" > .bob/var.image-repopath-internal
+    - task: image-full-name-internal
+      cmd: echo "${image-registry}/${image-ci-repopath}/${image-name}" > .bob/var.image-full-name-internal
+    - task: image-full-name-internal-adc
+      cmd: echo "${image-registry}/${image-ci-repopath}/${image-name-adc}" > .bob/var.image-full-name-internal-adc
+    - task: helm-chart-repo-internal
+      cmd: echo "${helm-chart-repo-server}/${helm-chart-ci-repopath}" > .bob/var.helm-chart-repo-internal
+    - task: set-upload
+      cmd: echo "--debug" > .bob/var.pri_params
+
+  # Drop level tasks: used by CI to publish artifacts after successful CI pipeline execution for a drop build
+  init-drop:
+    - task: version
+      docker-image: adp-release-auto
+      cmd: generate-version --is-release true --output version
+    - task: commit
+      docker-image: adp-release-auto
+      cmd: git rev-parse --short HEAD > .bob/var.commithash
+    - task: image-repopath-internal
+      cmd: echo "${image-ci-repopath}" > .bob/var.image-repopath-internal
+    - task: image-full-name-internal
+      cmd: echo "${image-registry}/${image-ci-repopath}/${image-name}" > .bob/var.image-full-name-internal
+    - task: image-full-name-internal-adc
+      cmd: echo "${image-registry}/${image-ci-repopath}/${image-name-adc}" > .bob/var.image-full-name-internal-adc
+    - task: helm-chart-repo-internal
+      cmd: echo "${helm-chart-repo-server}/${helm-chart-ci-repopath}" > .bob/var.helm-chart-repo-internal
+    - task: set-upload
+      cmd: echo "--debug --upload" > .bob/var.pri_params
+    - task: adp-artifacts-properties-adc
+      docker-image: adp-release-auto
+      cmd: generate-adp-artifacts
+        --chart-name ${helm-chart-name-adc}
+        --chart-version ${var.version}
+        --chart-repo ${helm-chart-drop-repo}
+        --image-name ${image-name-adc}
+        --image-version ${var.version}
+        --image-repo "${image-registry}/${var.image-repopath-internal}"
+    - task: adp-artifacts-properties
+      docker-image: adp-release-auto
+      cmd: generate-adp-artifacts
+        --chart-name ${helm-chart-name}
+        --chart-version ${var.version}
+        --chart-repo ${helm-chart-drop-repo}
+        --image-name ${image-name}
+        --image-version ${var.version}
+        --image-repo "${image-registry}/${var.image-repopath-internal}"
+    - task: write-git-details
+      cmd:
+        - echo "GIT_TAG=$(git log -1 --pretty=format:'%h')" >> artifact.properties
+        - echo "GIT_COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')" >> artifact.properties
+        - echo "GIT_COMMIT_SUMMARY=$(git log -1 --pretty=format:'%s')" >> artifact.properties
+
+  # Build a docker image pointing to dirty repository
+  image:
+    - task: docker-build
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker build ${env.PWD}
+        --file Docker/Dockerfile
+        --tag ${var.image-full-name-internal}:${var.version}
+        --build-arg REPOSITORY=${git-repo}
+        --build-arg COMMIT=${var.commithash}
+        --build-arg APP_VERSION=${var.version}
+    - task: docker-build-adc
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker build ${ADC-DOCKER-DIR}
+        --file ${ADC-DOCKER-DIR}/Dockerfile
+        --tag ${var.image-full-name-internal-adc}:${var.version}
+        --build-arg REPOSITORY=${git-repo}
+        --build-arg COMMIT=${var.commithash}
+        --build-arg APP_VERSION=${var.version}
+    - task: docker-build-adc-integration
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker build ${HELM_INTEGRATION_DOCKER_DIR}
+        --file ${HELM_INTEGRATION_DOCKER_DIR}/Dockerfile
+        --tag ${var.image-full-name-internal-adc}-integration:${var.version}
+        --tag ${var.image-full-name-internal-adc}-integration:latest
+
+  # Push image to ci-internal repo and create local version of helm chart
+  package-local:
+    - task: image-push-internal
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker push ${var.image-full-name-internal}:${var.version}
+    - task: image-push-internal-adc
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker push ${var.image-full-name-internal-adc}:${var.version}
+    - task: image-push-internal-adc-integration
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker push ${var.image-full-name-internal-adc}-integration:${var.version}
+    - task: package-helm-internal
+      docker-image: adp-release-auto
+      docker-flags:
+        - --env HELM_REPO_CREDENTIALS=repositories.yaml
+      cmd: helm-package
+        --folder charts/${helm-chart-name}
+        --workdir .bob --output .bob/${helm-chart-name}-internal
+        --version ${var.version}
+        --replace VERSION=${var.version}
+        --replace REPO_PATH=${var.image-repopath-internal}
+    - task: package-helm-internal-adc
+      docker-image: adp-release-auto
+      docker-flags:
+        - --env HELM_REPO_CREDENTIALS=repositories.yaml
+      cmd: helm-package
+        --folder eric-oss-5gpmevent-filetrans-proc/charts/${helm-chart-name-adc}
+        --workdir .bob --output .bob/${helm-chart-name-adc}-internal
+        --version ${var.version}
+        --replace VERSION=${var.version}
+        --replace REPO_PATH=${var.image-repopath-internal}
+
+  # Push image to ci-internal repo, create internal version of helm chart and pushes it to internal repo
+  package:
+    - rule: package-local
+    - task: helm-upload-internal
+      docker-image: adp-release-auto
+      cmd: upload_file.sh
+        --filename=.bob/${helm-chart-name}-internal/${helm-chart-file-name}
+        --repository=${var.helm-chart-repo-internal}/${helm-chart-name}
+        --api-token=${var.HELM_REPO_API_TOKEN}
+    - task: helm-upload-internal-adc
+      docker-image: adp-release-auto
+      cmd: upload_file.sh
+        --filename=.bob/${helm-chart-name-adc}-internal/${helm-chart-file-name-adc}
+        --repository=${var.helm-chart-repo-internal}/${helm-chart-name-adc}
+        --api-token=${var.HELM_REPO_API_TOKEN}
+
+  # Lint the helm chart
+  lint:
+    - task: markdownlint
+      docker-image: doc-builder
+      cmd: bash -c 'markdownlint --config /etc/markdownlint-cli/adp.yaml $(git ls-files -- \*\.md | cat | xargs)' || true
+    - task: vale
+      docker-image: doc-builder
+      cmd: bash -c 'vale --output line --no-wrap $(git ls-files -- \*\.md | cat | xargs)' || true
+    - task: helm
+      docker-image: adp-release-auto
+      cmd: helm lint charts/${helm-chart-name}
+
+  testdeploy:
+    - task: task1
+      docker-image: py3kubehelm
+      docker-mounts:
+        - "/home/lciadm100/jenkins/workspace/eric-event-data-collector_PreCodeReview:/home/helmuser"
+      cmd: sh /home/helmuser/testsnap.sh ${var.version} ${helm-chart-ci-drop-repo} ${var.CREDENTIALS_SEKA_ARTIFACTORY_PSW} ${var.CREDENTIALS_SEKI_ARTIFACTORY_PSW}
+
+  #Updating CBOS version in Dockerfile
+  create-new-cbo-patch:
+    - task: create-new-cbo-patch
+      docker-image: adp-release-auto
+      docker-flags:
+        - "--env GERRIT_USERNAME"
+        - "--env GERRIT_PASSWORD"
+      cmd:
+        - "sed -i 's/ARG CBO_VERSION=.*/ARG CBO_VERSION=${env.IMAGE_TAG}/' eric-oss-5gpmevent-filetrans-proc/Dockerfile"
+        - "sed -i 's/ARG CBOS_VERSION=.*/ARG CBOS_VERSION=${env.IMAGE_TAG}/' eric-oss-5gpmevent-filetrans-proc/Dockerfile"
+        - "sed -i 's/ARG CBO_VERSION=.*/ARG CBO_VERSION=${env.IMAGE_TAG}/' testsuite/integration/jee/Dockerfile"
+        - "sed -i 's/ARG CBOS_VERSION=.*/ARG CBOS_VERSION=${env.IMAGE_TAG}/' testsuite/integration/jee/Dockerfile"
+        - "sed -i 's/ARG CBO_VERSION=.*/ARG CBO_VERSION=${env.IMAGE_TAG}/' Docker/Dockerfile"
+        - "sed -i 's/ARG CBOS_VERSION=.*/ARG CBOS_VERSION=${env.IMAGE_TAG}/' Docker/Dockerfile"
+        - gerrit create-patch
+          --file eric-oss-5gpmevent-filetrans-proc/Dockerfile testsuite/integration/jee/Dockerfile Docker/Dockerfile
+          --message "NO JIRA Update Common Base OS in eric-event-data-collector to ${env.IMAGE_TAG}"
+          --email ${env.EMAIL}
+          --git-repo-local .
+          --wait-label "Verified"="+1"
+          --submit
+          --debug
+          --timeout 4200 # 70m
+        # If user does not have email set --email ${env.EMAIL}
+        #
+        
+  # Publish docker images and helm charts to drop repository (Call publish only when merged to master)
+  publish:
+    - task: package-helm-public
+      docker-image: adp-release-auto
+      docker-flags:
+        - --env HELM_REPO_CREDENTIALS=repositories.yaml
+      cmd: helm-package
+        --folder charts/${helm-chart-name}
+        --workdir .bob --output build
+        --version ${var.version}
+        --replace VERSION=${var.version}
+        --replace REPO_PATH=${image-drop-repopath}
+    - task: package-helm-public-adc
+      docker-image: adp-release-auto
+      docker-flags:
+        - --env HELM_REPO_CREDENTIALS=repositories.yaml
+      cmd: helm-package
+        --folder eric-oss-5gpmevent-filetrans-proc/charts/${helm-chart-name-adc}
+        --workdir .bob --output build
+        --version ${var.version}
+        --replace VERSION=${var.version}
+        --replace REPO_PATH=${image-drop-repopath}
+    - task: image-pull-internal
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker pull ${var.image-full-name-internal}:${var.version}
+    - task: image-pull-internal-adc
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker pull ${var.image-full-name-internal-adc}:${var.version}
+    - task: image-tag-public
+      cmd: docker tag ${var.image-full-name-internal}:${var.version} ${image-full-name}:${var.version}
+    - task: image-tag-public-adc
+      cmd: docker tag ${var.image-full-name-internal-adc}:${var.version} ${image-full-name-adc}:${var.version}
+    - task: image-push-public
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker push ${image-full-name}:${var.version}
+    - task: image-push-public-adc
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker push ${image-full-name-adc}:${var.version}
+    # Pushing image with latest tag
+    - task: image-tag-public
+      cmd: docker tag ${var.image-full-name-internal}:${var.version} ${image-full-name}:latest
+    - task: image-tag-public-adc
+      cmd: docker tag ${var.image-full-name-internal-adc}:${var.version} ${image-full-name-adc}:latest
+    - task: image-push-public
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker push ${image-full-name}:latest
+    - task: image-push-public-adc
+      cmd: cat .bob/var.HELM_REPO_API_TOKEN | docker login -u ${git-user} --password-stdin ${image-registry} && docker push ${image-full-name-adc}:latest
+    - task: git-tag
+      cmd:
+        - git tag -af ${var.version} -m "Release ${var.version}" || true
+        - git remote set-url origin ${git-repo-url} || true
+        - git push origin ${var.version} || true
+    - task: helm-upload
+      docker-image: adp-release-auto
+      cmd: upload_file.sh
+        --filename=build/${helm-chart-file-name}
+        --repository=${helm-chart-drop-repo}/${helm-chart-name}
+        --api-token=${var.HELM_REPO_API_TOKEN}
+    - task: helm-upload-adc
+      docker-image: adp-release-auto
+      cmd: upload_file.sh
+        --filename=build/${helm-chart-file-name-adc}
+        --repository=${helm-chart-drop-repo}/${helm-chart-name-adc}
+        --api-token=${var.HELM_REPO_API_TOKEN}

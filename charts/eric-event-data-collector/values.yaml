@@ -1,0 +1,347 @@
+# Signifies how many instances to be maintained by Kubernetes
+replicas: 1
+# Represents Kubernetes StatefulSets update strategies
+updateStrategy:
+  type: RollingUpdate
+# Kubelet pulling image strategy
+imagePullPolicy: IfNotPresent
+
+global:
+  pullSecret:
+  registry:
+    # Docker repository url
+    url: armdocker.rnd.ericsson.se
+    # pullSecret:
+  security:
+    policyBinding:
+      create: false
+
+# Support user defined labels (DR-D1121-068)
+labels: {}
+
+images:
+  collector:
+    # Event Data Collector's image name
+    name: event-data-collector
+    # Event Data Collector's tag
+    tag: VERSION
+
+  jmx:
+    # ADP PM Server's image name
+    name: jmx-exporter-multi-port
+    # ADP PM Server's tag
+    tag: 1.21.0-0
+
+imageCredentials:
+  pullSecret:
+  registry:
+    # Docker repository url
+    url: # overrides global registry url
+    # pullSecret:
+  # Docker repository path
+  repoPath: REPO_PATH
+  jmxPath: proj-ec-son-drop
+
+affinity: {}
+
+ctrParser:
+  # Schema registry details
+  schemaRegistry:
+    # Schema registry server's request serving protocol
+    serviceProtocol: "http"
+    # Schema registry address (it can a hostname or ip address)
+    serviceName: "schemaregistry"
+    # Schema registry port number
+    port: "8081"
+
+  # This is used as identifier for Eps JVM process & JMX metrics
+  applicationId: "apeps"
+  # Parser's base application folder
+  applicationHome: "/ericsson/apeps"
+  # Path where flow configurations files reside
+  flowDirectory: "/ericsson/apeps/flow"
+  # Initial heap size
+  heap: 1500M
+  # Maximum heap size
+  maxHeap: 1500M
+  # Tells the kubelet that it should wait 5 second before performing health check  
+  livenessProbeInitialDelaySeconds: 5
+  # Kubelet checks the health of Container periodically(5 seconds) (based on running java processes)
+  livenessProbePeriodSeconds: 5
+  # Tells the kubelet to wait 5 seconds before performing service availability check
+  readinessProbeInitialDelaySeconds: 5
+  # Kubelet checks whether the service is available or not periodically(5 seconds) (based on running java processes)
+  readinessProbePeriodSeconds: 5
+  #Kubelet starts a Container of a Pod, it passes the CPU settings to it.
+  # The amount of cpu resources required by the Event Data Collector container.
+  cpu: 150m
+  # The maximum amount of cpu resource usage allowed for the Event Data Collector container.
+  maxCpu: 250m
+  # Memory resources required by the ctr parser container.
+  memory: 1500M
+  # Memory limits for the ctr parser
+  maxMemory: 2500M
+  #default location for files to be mounted to, allowing for modification if required on startup.
+  staging: /ericsson/staging
+
+  logging:
+    #Event Data Collector's logging configuration
+    #logback file name
+    logbackFile: "logback.xml"
+    # Is a output path for storing parser's log files
+    logDirectory: "/ericsson/apeps/log"
+    # Global root level
+    rootLoggerLevel: "info"
+    # Data set for logback
+    logback.xml: |
+      <?xml version="1.0"?>
+      <configuration>
+        <!-- it is important for every EPS instance to have unique ID. This can be done by specifying system parameter EPS_INSTANCE_ID -->
+        <contextName>EPS-${EPS_INSTANCE_ID}</contextName>
+        <!-- enable use of JMX for configuring logging levels -->
+        <jmxConfigurator />
+        <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+          <append>true</append>
+          <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+          </encoder>
+        </appender>
+        <logger name="com.hazelcast" level="ERROR"/>
+        <logger name="org.apache.kafka" level="WARN"/>
+        <root level="${ROOT_LOGGER_LEVEL}">
+          <appender-ref ref="STDOUT"/>
+        </root>
+      </configuration>
+  instrument:
+    # Option to enable metrics reporting
+    instrumentationOn: "true"
+    # Reporting metrics values via (type); other available option: CSV & SLF4J
+    instrumentationMethod: "JMX"
+    # Path where reported metrics are stored (used in case of csv)
+    instrumentationFileLocation: "/ericsson/apeps/reporting"
+    # JMX service details
+    jmx:
+      # Parser's JMX serving port
+      destPort: 10000
+      # Service monitor port (which publishes metrics to ADP PM Server)
+      servicePort: 21000
+      rules: "default"
+      # Tells the kubelet that it should wait 180 second before performing health check (based on TCP socket)
+      livenessProbeInitialDelaySeconds: 180
+      # Number of seconds after which the liveness probe times out
+      livenessProbeTimeoutSeconds: 10
+      # Tells the kubelet to wait 60 seconds before performing service availability check (based on TCP socket)
+      readinessProbeInitialDelaySeconds: 60
+      # Number of seconds after which the readiness probe times out
+      readinessProbeTimeoutSeconds: 5
+      # The amount of cpu resources required by the jmx container.
+      cpu: 50m
+      # The maximum amount of cpu resource usage allowed for the jmx container.
+      maxCpu: 50m
+      # The amount of memory (RAM) required by the jmx container.
+      memory: 256Mi
+      # The maximum amount of memory usage allowed for jmx container.
+      maxMemory: 512Mi
+
+
+  flow:
+    # configuration for event Data Collection from CTR data files, file paths are sent via message bus kf to the Collector
+    flowFile: "flow.xml"
+    # Please refer for below properties: https://confluence-nam.lmera.ericsson.se/display/DA/DRAFT+Configuration#DRAFTConfiguration-ConfigurationValuesforctr-parser.flow.flowFile
+    flow.xml: |
+      <?xml version="1.0"?>
+      <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+      <FlowDefinition xmlns:oc="urn:com:ericsson:schema:xml:oss:oss_common" xmlns="urn:com:ericsson:schema:xml:oss:fbp_flow" oc:ns="com.ericsson.oss.services" oc:name="EsnSolutionSet" oc:version="1.0.0">
+      <oc:modelCreationInfo author="easchud" creationDate="10/07/2018">
+      <oc:designedModel componentId="avroParserEps"/>
+      </oc:modelCreationInfo>
+      <oc:desc>Parse input CTR files and filter out the desired decode events to kafka output topic.</oc:desc>
+
+        <input name="kafkaInputAdaptor">
+          <attribute name="uri" value="generic:/" />
+          <attribute name="integration.point.uri" value="local:///ericsson/apeps/flow" />
+          <attribute name="integration.point.name" value="SUBSCRIBER_INTEGRATION_POINT" />
+        </input>
+
+        <input name="cmMediatorKafkaInputAdaptor">
+          <attribute name="uri" value="generic:/" />
+          <attribute name="integration.point.uri" value="local:///ericsson/apeps/flow" />
+          <attribute name="integration.point.name" value="CMMEDIATOR_SUBSCRIBER_INTEGRATION_POINT" />
+        </input>
+
+        <output name="kafkaOutputAdapter">
+          <attribute name="uri" value="avro:/"/>
+          <attribute name="integration.point.uri" value="local:///ericsson/apeps/flow" />
+          <attribute name="integration.point.name" value="PUBLISHER_INTEGRATION_POINT" />
+        </output>
+
+        <step name="pmFileParser">
+          <handler>
+            <className>com.ericsson.component.aia.services.exteps.eh.parser.PMFileParser</className>
+          </handler>
+          <attribute name="schematype" value="celltrace"/>
+          <attribute name="decodedEventType" value="generic_record"/>
+          <attribute name="eventFilterPath" value="http://eric-cm-mediator:5003/cm/api/v1/configurations/eventlist"/>
+        </step>
+
+        <path>
+          <from uri="kafkaInputAdaptor"/>
+          <to uri="pmFileParser" />
+          <to uri="kafkaOutputAdapter" />
+        </path>
+        <path>
+          <from uri="cmMediatorKafkaInputAdaptor"/>
+          <to uri="pmFileParser" />
+        </path>
+
+      </FlowDefinition>
+  ipl:
+    iplPath: "/ericsson/apeps/flow"
+    subscriber:
+      # Kafka subscriber configuration details
+      subscriberFile: "SUBSCRIBER_INTEGRATION_POINT.json"
+      #  Please refer for below properties: https://confluence-nam.lmera.ericsson.se/display/DA/DRAFT+Configuration#DRAFTConfiguration-ConfigurationValuesforctr-parser.ipl.subscriber.subscriberFileContent
+      subscriberFileContent: |
+        {
+             "type": "SUBSCRIBER",
+             "properties": [{
+                     "name": "bootstrap.servers",
+                     "value": "eric-data-message-bus-kf:9092"
+                 }, {
+                     "name": "group.id",
+                     "value": "epsFileConsumerGrp"
+                 }, {
+                     "name": "auto.offset.reset",
+                     "value": "latest"
+                 }, {
+                     "name": "enable.auto.commit",
+                     "value": "true"
+                 }, {
+                     "name": "session.timeout.ms",
+                     "value": "15000"
+                 }, {
+                     "name": "auto.commit.interval.ms",
+                     "value": "1000"
+                 }, {
+                     "name": "partition_count",
+                     "value": "1"
+                 }
+             ],
+             "destinations": [{
+                     "name": "epsFileInput",
+                     "properties": [{
+                             "name": "key.deserializer",
+                             "value": "org.apache.kafka.common.serialization.StringDeserializer"
+                         }, {
+                             "name": "value.deserializer",
+                             "value": "org.apache.kafka.common.serialization.StringDeserializer"
+                         }
+                     ]
+                 }
+             ]
+        }
+
+      cmMediator_SubscriberFile: "CMMEDIATOR_SUBSCRIBER_INTEGRATION_POINT.json"
+      # CM Mediator kafka subscriber configuration details
+      # Please refer for below properties: https://confluence-nam.lmera.ericsson.se/display/DA/DRAFT+Configuration#DRAFTConfiguration-ConfigurationValuesforctr-parser.ipl.subscriber.cmMediator_SubscriberFileContent
+      cmMediator_SubscriberFileContent: |
+        {
+            "type": "SUBSCRIBER",
+            "properties": [{
+                    "name": "bootstrap.servers",
+                    "value": "eric-data-message-bus-kf:9092"
+                }, {
+                    "name": "group.id",
+                    "value": "filterEventListConsumerGrp"
+                }, {
+                    "name": "auto.offset.reset",
+                    "value": "latest"
+                }, {
+                    "name": "enable.auto.commit",
+                    "value": "true"
+                }, {
+                    "name": "session.timeout.ms",
+                    "value": "15000"
+                }, {
+                    "name": "auto.commit.interval.ms",
+                    "value": "1000"
+                }, {
+                    "name": "partition_count",
+                    "value": "3"
+                }
+            ],
+            "destinations": [{
+                    "name": "filterEventList",
+                    "properties": [{
+                            "name": "key.deserializer",
+                            "value": "org.apache.kafka.common.serialization.StringDeserializer"
+                        }, {
+                            "name": "value.deserializer",
+                            "value": "org.apache.kafka.common.serialization.StringDeserializer"
+                        }
+                    ]
+                }
+            ]
+        }
+
+    publisher:
+      # Kafka publisher configuration details
+      publisherFile: "PUBLISHER_INTEGRATION_POINT.json"
+      # Please refer for below properties: https://confluence-nam.lmera.ericsson.se/display/DA/DRAFT+Configuration#DRAFTConfiguration-ConfigurationValuesforctr-parser.ipl.publisher.publisherFileContent
+      publisherFileContent: |
+        {
+             "type": "PUBLISHER",
+             "properties": [{
+                     "name": "request.timeout.ms",
+                     "value": "60000"
+                 }, {
+                     "name": "bootstrap.servers",
+                     "value": "eric-data-message-bus-kf:9092"
+                 }, {
+                     "name": "acks",
+                     "value": "all"
+                 }, {
+                     "name": "retries",
+                     "value": "0"
+                 }, {
+                     "name": "batch.size",
+                     "value": "1048576"
+                 }, {
+                     "name": "linger.ms",
+                     "value": "2000"
+                 }, {
+                     "name": "buffer.memory",
+                     "value": "104857600"
+                 }, {
+                     "name": "partition_count",
+                     "value": "3"
+                 }
+             ],
+             "destinations": [{
+                     "name": "epsOut",
+                     "properties": [{
+                             "name": "key.serializer",
+                             "value": "org.apache.kafka.common.serialization.StringSerializer"
+                         }, {
+                             "name": "value.serializer",
+                             "value": "com.ericsson.component.aia.common.avro.kafka.encoder.KafkaGenericRecordEncoder"
+                         }, {
+                             "name": "partitioner.class",
+                             "value": "com.ericsson.component.aia.services.exteps.io.adapter.partition.ENodeBIdPartitioner"
+                         }
+                     ]
+                 }
+             ]
+        }
+
+    # Events filter list (only accepts events define in the file)
+    eventFilterFile: "eventListFilter.json"
+    # Please refer for below properties: https://confluence-nam.lmera.ericsson.se/display/DA/DRAFT+Configuration#DRAFTConfiguration-ConfigurationValuesforctr-parser.ipl.publisher.eventFilterFileContent
+    eventFilterFileContent: |
+      {
+       "events": []
+      }
+
+# DR-D1120-055
+podDisruptionBudget:
+  minAvailable: 0%
